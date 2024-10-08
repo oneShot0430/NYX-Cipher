@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 var uniqueValidator = require('mongoose-unique-validator');
 const {CUSTOMER} = require('../config/constant')
+const bcrypt = require('bcrypt');
 
 //------------ User Schema ------------//
 const UserSchema = new mongoose.Schema({
@@ -17,6 +18,22 @@ const UserSchema = new mongoose.Schema({
   wallet_address: { type: String, unique : true, default: null },
   nonce: { type: String, unique : true, default: null },
 }, { timestamps: true });
+
+UserSchema.pre('save', async function (next) {
+  // Only hash the password if it's new or modified
+  if (!this.isModified('password')) {
+    return next();
+  }
+
+  try {
+    // Generate salt and hash the password
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 UserSchema.plugin(uniqueValidator, {message: 'is already taken.'});
 
